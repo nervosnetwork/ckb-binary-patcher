@@ -83,7 +83,27 @@ fn process_instruction(data: &mut Vec<u8>, pc: u64, instruction: Instruction, le
                     }
                     insts::OP_RVC_JALR => {
                         let next_i = Stype(next_instruction);
-                        if next_i.rs1() == next_i.rs2() && next_i.rs1() == i.rd() {}
+                        if next_i.rs1() == 1 && next_i.rs1() == i.rd() {
+                            let destination = pc.wrapping_add(i64::from(i.immediate_s()) as u64);
+                            let offset = destination.wrapping_sub(next_pc);
+                            let masked = offset & 0xFFFFFFFFFFF00001;
+                            if masked != 0 && masked != 0xFFFFFFFFFFF00000 {
+                                panic!("Invalid offset: {:016x}", offset);
+                            }
+                            let jal_instruction = 0b1101111
+                                | ((i.rd() as u32) << 7)
+                                | ((((offset >> 12) & 0b_1111_1111) as u32) << 12)
+                                | ((((offset >> 11) & 1) as u32) << 20)
+                                | ((((offset >> 1) & 0b_1111_1111_11) as u32) << 21)
+                                | ((((offset >> 20) & 1) as u32) << 31);
+                            LittleEndian::write_u32(&mut data[pc as usize..], jal_instruction);
+                            // Jump to 4 bytes earlier
+                            LittleEndian::write_u16(
+                                &mut data[next_pc as usize..],
+                                0b_1011_1111_1111_0101,
+                            );
+                            return len + next_len;
+                        }
                     }
                     _ => (),
                 }
@@ -97,7 +117,7 @@ fn process_instruction(data: &mut Vec<u8>, pc: u64, instruction: Instruction, le
         }
         insts::OP_RVC_JALR => {
             let i = Stype(instruction);
-            if i.rs1() == i.rs2() {
+            if i.rs1() == 1 {
                 panic!("The instruction {:016x} will trigger a bug, see https://github.com/nervosnetwork/ckb-vm/issues/92", instruction);
             }
         }
