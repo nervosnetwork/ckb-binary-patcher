@@ -111,14 +111,14 @@ fn process_instruction(data: &mut Vec<u8>, pc: u64, instruction: Instruction, le
         }
         insts::OP_JALR => {
             let i = Itype(instruction);
-            if i.rs1() == i.rd() {
-                panic!("The instruction {:016x} will trigger a bug, see https://github.com/nervosnetwork/ckb-vm/issues/92", instruction);
+            if i.rs1() == i.rd() && i.rd() != 0 {
+                panic!("The instruction {:016x} at {:x} will trigger a bug, see https://github.com/nervosnetwork/ckb-vm/issues/92", instruction, pc);
             }
         }
         insts::OP_RVC_JALR => {
             let i = Stype(instruction);
             if i.rs1() == 1 {
-                panic!("The instruction {:016x} will trigger a bug, see https://github.com/nervosnetwork/ckb-vm/issues/92", instruction);
+                panic!("The instruction {:016x} at {:x} will trigger a bug, see https://github.com/nervosnetwork/ckb-vm/issues/92", instruction, pc);
             }
         }
         _ => (),
