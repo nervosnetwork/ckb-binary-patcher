@@ -147,12 +147,12 @@ fn remove_a_instruction(data: &mut Vec<u8>, pc: u64) {
     }
     let pc2 = pc as usize;
     if len == 4 && &data[pc2..pc2 + 4] == &[0xaf, 0xa7, 0xe6, 0x04] {
-        data[pc2] = 0;
+        data[pc2] = 0x13; // nop
         data[pc2 + 1] = 0;
         data[pc2 + 2] = 0;
         data[pc2 + 3] = 0;
         println!(
-            "instruction at {}(content 04e6a7af) is removed (filled as zero)",
+            "instruction at {}(content 04e6a7af) is replace by nop",
             pc2
         );
     }
