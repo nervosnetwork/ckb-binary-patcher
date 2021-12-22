@@ -154,11 +154,14 @@ fn remove_a_instruction(data: &mut Vec<u8>, pc: u64) {
             &data[pc2..pc2+4] == &[0x2f, 0xb7,  0xe7, 0x0c]
         )
     {
-        data[pc2] = 0x13; // nop
-        data[pc2 + 1] = 0;
-        data[pc2 + 2] = 0;
-        data[pc2 + 3] = 0;
-        println!("instruction at {}(content 04e6a7af) is replace by nop", pc2);
+        data[pc2] = 0x03; // fff00503 lb a0,-1(zero)
+        data[pc2 + 1] = 0x05;
+        data[pc2 + 2] = 0xf0;
+        data[pc2 + 3] = 0xff;
+        println!(
+            "instruction at {}(content 04e6a7af) is replace by \"lb a0,-1(zero)\"",
+            pc2
+        );
     }
 }
 
