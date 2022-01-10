@@ -16,6 +16,13 @@ fn main() {
                 .takes_value(true),
         )
         .arg(
+            Arg::with_name("remove-a")
+                .short("a")
+                .long("remove-a")
+                .help("Remove A instructions")
+                .takes_value(false),
+        )
+        .arg(
             Arg::with_name("output")
                 .short("o")
                 .long("output")
@@ -24,7 +31,7 @@ fn main() {
                 .takes_value(true),
         )
         .get_matches();
-
+    let remove_a = matches.is_present("remove-a");
     let mut data = read(matches.value_of("input").unwrap()).expect("cannot open input file!");
 
     let elf = Elf::parse(&data).expect("cannot parse input binary!");
@@ -39,6 +46,9 @@ fn main() {
                         pc += process_instruction(&mut data, pc, i, len);
                     }
                     (None, len) => {
+                        if remove_a {
+                            remove_a_instruction(&mut data, pc);
+                        }
                         pc += len;
                     }
                 }
@@ -124,6 +134,35 @@ fn process_instruction(data: &mut Vec<u8>, pc: u64, instruction: Instruction, le
         _ => (),
     };
     len
+}
+
+fn remove_a_instruction(data: &mut Vec<u8>, pc: u64) {
+    if pc >= data.len() as u64 {
+        return;
+    }
+    let i = u32::from(LittleEndian::read_u16(&data[pc as usize..]));
+    let mut len = 2;
+    if i & 0x3 == 0x3 {
+        len = 4;
+    }
+    let pc2 = pc as usize;
+    if len == 4
+        && (
+            // amoadd.w.aq	a5,a4,(a3)
+            &data[pc2..pc2 + 4] == &[0xaf, 0xa7, 0xe6, 0x04] ||
+            // amoswap.d.aq	a4,a4,(a5)
+            &data[pc2..pc2+4] == &[0x2f, 0xb7,  0xe7, 0x0c]
+        )
+    {
+        data[pc2] = 0x03; // fff00503 lb a0,-1(zero)
+        data[pc2 + 1] = 0x05;
+        data[pc2 + 2] = 0xf0;
+        data[pc2 + 3] = 0xff;
+        println!(
+            "instruction at {}(content 04e6a7af) is replace by \"lb a0,-1(zero)\"",
+            pc2
+        );
+    }
 }
 
 fn decode_instruction(data: &Vec<u8>, pc: u64) -> (Option<Instruction>, u64) {
